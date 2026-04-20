@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Network</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0e0e;--bg2:#181616;--bg3:#211e1e;--bg4:#2a2626;--bg5:#332f2f;
+  --text:#f0ece8;--text2:#a89e9a;--text3:#6b6260;
+  --bdr:rgba(255,255,255,0.07);--bdr2:rgba(255,255,255,0.13);--bdr3:rgba(255,255,255,0.22);
+  --r:8px;--rl:12px;
+  --red:#9b1c1c;--red2:#7a1515;--red3:#c0392b;
+  --red-bg:rgba(155,28,28,0.15);--red-bdr:rgba(155,28,28,0.4);--red-tx:#e8a09a;
+  --gold-bg:rgba(184,134,11,0.12);--gold-tx:#d4a853;--gold-bdr:rgba(184,134,11,0.3);
+  --teal-bg:rgba(26,107,107,0.15);--teal-tx:#6dc4c4;--teal-bdr:rgba(26,107,107,0.4);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:3px}
+
+/* ── Layout ── */
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+header{background:var(--bg2);border-bottom:1px solid var(--bdr2);padding:.75rem 1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;flex-shrink:0;z-index:30}
+.logo{font-size:16px;font-weight:600;letter-spacing:.04em;display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--red3);flex-shrink:0}
+.hbtns{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-left:auto}
+.statsbar{background:var(--bg2);border-bottom:1px solid var(--bdr);padding:.5rem 1.5rem;display:flex;gap:1.5rem;flex-wrap:wrap;overflow-x:auto;flex-shrink:0}
+.stat{display:flex;align-items:baseline;gap:4px;white-space:nowrap}
+.stat-n{font-size:17px;font-weight:500}.stat-l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.stat-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:3px;flex-shrink:0}
+
+/* ── Body split ── */
+.body-wrap{display:flex;flex:1;overflow:hidden}
+.main-panel{flex:1;overflow-y:auto;padding:1.1rem 1rem}
+.chat-panel{width:320px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--bdr2);display:flex;flex-direction:column;transition:width .2s}
+.chat-panel.collapsed{width:0;overflow:hidden;border:none}
+
+/* ── Toolbar ── */
+.toolbar{display:flex;gap:7px;margin-bottom:.8rem;flex-wrap:wrap;align-items:center}
+.toolbar input{flex:1;min-width:180px}
+.toolbar select{width:auto;flex-shrink:0}
+.viewbtns{display:flex;border:1px solid var(--bdr2);border-radius:var(--r);overflow:hidden;flex-shrink:0}
+.vbtn{padding:5px 11px;background:none;border:none;cursor:pointer;font-size:11px;color:var(--text3);border-right:1px solid var(--bdr2);font-family:inherit;letter-spacing:.04em;text-transform:uppercase;transition:all .15s}
+.vbtn:last-child{border-right:none}
+.vbtn.on{background:var(--red-bg);color:var(--red-tx)}
+.tagbar{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:.8rem}
+.tbtn{background:var(--bg3);border:1px solid var(--bdr2);border-radius:20px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--text2);transition:all .15s}
+.tbtn:hover{background:var(--bg4)}
+
+/* ── Cards ── */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:10px}
+.card{background:var(--bg2);border:1px solid var(--bdr2);border-radius:var(--rl);border-top:2px solid transparent;display:flex;flex-direction:column;transition:border-color .15s}
+.card:hover{border-color:var(--bdr3)}
+.card-inner{padding:.85rem;flex:1;display:flex;flex-direction:column}
+.card-top{display:flex;align-items:flex-start;gap:9px;margin-bottom:7px}
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0;overflow:hidden}
+.avatar.eav{font-size:19px;font-weight:400;background:var(--bg4)}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.card-head{flex:1;min-width:0}
+.card-name{font-weight:500;font-size:13px;display:flex;align-items:center;gap:4px}
+.star{cursor:pointer;font-size:12px;opacity:.2;transition:opacity .15s}
+.star:hover{opacity:.6}.star.on{opacity:1;color:var(--gold-tx)}
+.card-company{font-size:12px;font-weight:500;color:var(--text);margin-top:2px}
+.card-position{font-size:11px;color:var(--text2);margin-top:1px}
+.card-contact{font-size:11px;color:var(--teal-tx);margin-top:2px}
+.card-li a{font-size:10px;color:var(--text3);text-decoration:none}.card-li a:hover{color:var(--teal-tx)}
+.sbadge{font-size:10px;padding:2px 7px;border-radius:20px;border:1px solid transparent;display:inline-flex;align-items:center;gap:3px;letter-spacing:.02em;margin-bottom:6px}
+.card-note{font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:6px}
+.tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+.tag{font-size:10px;padding:2px 6px;border-radius:20px;border:1px solid transparent;letter-spacing:.02em}
+.fu-over{font-size:10px;padding:2px 7px;border-radius:5px;background:var(--red-bg);color:var(--red-tx);border:1px solid var(--red-bdr);margin-top:4px;display:inline-block}
+.fu-soon{background:var(--gold-bg);color:var(--gold-tx);border-color:var(--gold-bdr)}
+.divider{border:none;border-top:1px solid var(--bdr);margin:7px 0}
+.card-ctx{font-size:10px;color:var(--text3);display:flex;flex-wrap:wrap;gap:5px}
+.card-footer{border-top:1px solid var(--bdr);padding:.45rem .85rem;display:flex;gap:4px;align-items:center}
+.card-footer button{font-size:10px;padding:3px 7px;background:none;border:1px solid var(--bdr2);border-radius:5px;cursor:pointer;color:var(--text2);font-family:inherit;transition:all .15s}
+.card-footer button:hover{background:var(--bg4);color:var(--text)}
+.card-footer .del{color:#9b4444;border-color:rgba(155,68,68,.3)}
+.card-footer .del:hover{background:var(--red-bg)}
+.card-footer .ai-btn{color:var(--gold-tx);border-color:var(--gold-bdr)}
+.card-footer .ai-btn:hover{background:var(--gold-bg)}
+.card-footer .rml{margin-left:auto}
+
+/* ── Kanban ── */
+.kanban{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:9px;align-items:start}
+.kol{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--rl);padding:.65rem}
+.kol-title{font-size:10px;font-weight:500;margin-bottom:7px;display:flex;align-items:center;gap:5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text2)}
+.kol-n{font-size:10px;color:var(--text3);margin-left:auto}
+.kcard{background:var(--bg3);border:1px solid var(--bdr);border-radius:var(--r);padding:.55rem .65rem;margin-bottom:5px;cursor:pointer;border-left:2px solid transparent;transition:border-color .15s}
+.kcard:hover{border-color:var(--bdr3)}
+.kcard-name{font-size:12px;font-weight:500}
+.kcard-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.empty{text-align:center;padding:3rem;color:var(--text3);font-size:13px;grid-column:1/-1;line-height:1.9}
+
+/* ── Chat panel ── */
+.chat-header{padding:.75rem 1rem;border-bottom:1px solid var(--bdr2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.chat-header h3{font-size:13px;font-weight:500;letter-spacing:.03em;display:flex;align-items:center;gap:7px}
+.chat-indicator{width:6px;height:6px;border-radius:50%;background:var(--gold-tx)}
+.chat-msgs{flex:1;overflow-y:auto;padding:.75rem;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:90%;font-size:12px;line-height:1.6;padding:.6rem .8rem;border-radius:10px}
+.msg.user{align-self:flex-end;background:var(--red-bg);border:1px solid var(--red-bdr);color:var(--text);border-radius:10px 10px 2px 10px}
+.msg.ai{align-self:flex-start;background:var(--bg3);border:1px solid var(--bdr2);color:var(--text2);border-radius:10px 10px 10px 2px}
+.msg.ai.thinking{color:var(--text3);font-style:italic}
+.msg-contact-card{background:var(--bg4);border:1px solid var(--bdr2);border-radius:var(--r);padding:.6rem .7rem;margin-top:6px;cursor:pointer;transition:border-color .15s}
+.msg-contact-card:hover{border-color:var(--bdr3)}
+.msg-contact-card .mcn{font-size:12px;font-weight:500;color:var(--text)}
+.msg-contact-card .mcs{font-size:11px;color:var(--text3);margin-top:1px}
+.chat-input-wrap{padding:.65rem;border-top:1px solid var(--bdr2);display:flex;gap:6px;flex-shrink:0}
+.chat-input-wrap textarea{flex:1;min-height:36px;max-height:100px;padding:7px 9px;font-size:12px;resize:none;background:var(--bg3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--text)}
+.chat-input-wrap textarea:focus{border-color:var(--red);outline:none}
+.chat-input-wrap button{padding:7px 10px;align-self:flex-end}
+.chat-suggestions{padding:.5rem .75rem;border-top:1px solid var(--bdr);display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0}
+.cs-btn{font-size:10px;padding:3px 9px;background:var(--bg3);border:1px solid var(--bdr2);border-radius:20px;cursor:pointer;color:var(--text3);font-family:inherit;transition:all .15s;white-space:nowrap}
+.cs-btn:hover{background:var(--bg4);color:var(--text2)}
+.chat-toggle{padding:5px 10px;font-size:11px}
+
+/* ── Inputs / Buttons ── */
+input,textarea,select{padding:7px 10px;border:1px solid var(--bdr2);border-radius:var(--r);background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;outline:none;width:100%}
+input::placeholder,textarea::placeholder{color:var(--text3)}
+input:focus,textarea:focus,select:focus{border-color:var(--red);box-shadow:0 0 0 2px rgba(155,28,28,.2)}
+textarea{resize:vertical}
+select option{background:var(--bg3)}
+.btn{padding:6px 12px;background:none;border:1px solid var(--bdr2);border-radius:var(--r);cursor:pointer;color:var(--text2);font-size:12px;font-family:inherit;transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--bg4);border-color:var(--bdr3);color:var(--text)}
+.btn-p{background:var(--red-bg);border-color:var(--red-bdr);color:var(--red-tx)}
+.btn-p:hover{background:rgba(155,28,28,.25)}
+.btn-gold{background:var(--gold-bg);border-color:var(--gold-bdr);color:var(--gold-tx)}
+.btn-gold:hover{background:rgba(184,134,11,.22)}
+
+/* ── Overlays / Modals ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:50;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto}
+.overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--bdr2);border-radius:var(--rl);padding:1.3rem;width:100%;max-width:500px;margin:auto}
+.modal h2{font-size:15px;font-weight:500;margin-bottom:1rem;letter-spacing:.02em}
+.field{margin-bottom:9px}
+.field label{font-size:10px;color:var(--text3);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em}
+.field textarea{height:60px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.chip{font-size:11px;padding:3px 8px;border-radius:20px;cursor:pointer;border:1px solid var(--bdr2);background:var(--bg3);color:var(--text2)}
+.chip.on{background:var(--red-bg);border-color:var(--red-bdr);color:var(--red-tx)}
+.sec{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin:.9rem 0 .4rem;padding-bottom:3px;border-bottom:1px solid var(--bdr)}
+.mfoot{display:flex;gap:6px;justify-content:flex-end;margin-top:1rem}
+
+/* ── Avatar ── */
+.avprev{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;flex-shrink:0;overflow:hidden;border:1px solid var(--bdr2);background:var(--bg4)}
+.avprev.eav{font-size:22px;font-weight:400}
+.avprev img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.swatches{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.sw{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;flex-shrink:0}
+.sw.sel{border-color:var(--text)}
+.egrid{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.eopt{width:29px;height:29px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;border:1px solid transparent;background:var(--bg3)}
+.eopt.sel,.eopt:hover{border-color:var(--red-bdr);background:var(--red-bg)}
+.avtrow{display:flex;gap:4px;margin-bottom:7px}
+.avtbtn{padding:4px 9px;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.avtbtn.on{background:var(--red-bg);border-color:var(--red-bdr);color:var(--red-tx)}
+
+/* ── Log modal ── */
+.log-entry{padding:6px 0;border-bottom:1px solid var(--bdr)}
+.log-entry:last-child{border-bottom:none}
+.log-date{font-size:10px;color:var(--text3);margin-bottom:1px;text-transform:uppercase;letter-spacing:.04em}
+.log-text{font-size:12px;color:var(--text2);line-height:1.5}
+.ai-result{background:var(--bg3);border:1px solid var(--gold-bdr);border-radius:var(--r);padding:.85rem;font-size:12px;line-height:1.65;color:var(--text);white-space:pre-wrap;min-height:72px}
+
+/* ── LinkedIn import ── */
+.li-step{background:var(--bg3);border:1px solid var(--bdr2);border-radius:var(--r);padding:.85rem;margin-bottom:10px;font-size:12px;color:var(--text2);line-height:1.7}
+.li-step strong{color:var(--text);font-weight:500}
+.li-step code{background:var(--bg4);padding:1px 6px;border-radius:4px;font-size:11px;color:var(--teal-tx)}
+.li-drop{border:1.5px dashed var(--bdr2);border-radius:var(--r);padding:2rem;text-align:center;cursor:pointer;transition:all .2s;margin-top:8px}
+.li-drop:hover,.li-drop.drag{border-color:var(--red-bdr);background:var(--red-bg)}
+.li-drop p{font-size:13px;color:var(--text2);margin-bottom:4px}
+.li-drop span{font-size:11px;color:var(--text3)}
+.li-preview{max-height:200px;overflow-y:auto;margin-top:10px}
+.li-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:12px}
+.li-row:last-child{border:none}
+.li-check{width:14px;height:14px;flex-shrink:0;accent-color:var(--red3)}
+
+/* ── Settings ── */
+.srule{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.srule input{flex:1}
+.swbtn{width:24px;height:24px;border-radius:5px;border:1px solid var(--bdr2);cursor:pointer;flex-shrink:0}
+.pop{display:none;position:fixed;background:var(--bg2);border:1px solid var(--bdr2);border-radius:var(--rl);padding:8px;z-index:400;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.pop.open{display:block}
+.cgrid{display:grid;grid-template-columns:repeat(8,21px);gap:4px}
+.cdot{width:21px;height:21px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.cdot:hover,.cdot.sel{border-color:var(--text)}
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--bg4);color:var(--text);border:1px solid var(--bdr2);padding:6px 14px;border-radius:20px;font-size:12px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:500}
+.toast.show{opacity:1}
+@media(max-width:700px){.chat-panel{position:fixed;right:0;top:0;bottom:0;z-index:40;width:300px!important}.chat-panel.collapsed{width:0!important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <div class="logo"><span class="logo-dot"></span>Network</div>
+  <div class="hbtns">
+    <div class="viewbtns">
+      <button class="vbtn on" id="vb-cards" onclick="setView('cards')">Cards</button>
+      <button class="vbtn" id="vb-kanban" onclick="setView('kanban')">Pipeline</button>
+    </div>
+    <button class="btn" onclick="openLIImport()">LinkedIn Import</button>
+    <button class="btn" onclick="openSettings()">Customize</button>
+    <button class="btn" onclick="exportData()">Export</button>
+    <label class="btn" style="cursor:pointer">Import<input type="file" accept=".json" style="display:none;width:auto;padding:0;border:none;background:none" onchange="importData(event)"/></label>
+    <button class="btn btn-p" onclick="openModal()">+ Add person</button>
+    <button class="btn chat-toggle" id="chat-toggle-btn" onclick="toggleChat()">AI Assistant ↗</button>
+  </div>
+</header>
+
+<div class="statsbar" id="statsbar"></div>
+
+<div class="body-wrap">
+  <!-- Main panel -->
+  <div class="main-panel" id="main-panel">
+    <div class="toolbar">
+      <input type="text" id="search" placeholder="Search name, company, skill, location..." oninput="render()"/>
+      <select id="sortsel" onchange="render()">
+        <option value="star">Stars first</option>
+        <option value="name">Name A–Z</option>
+        <option value="added">Recently added</option>
+        <option value="followup">Follow-up due</option>
+        <option value="activity">Last activity</option>
+      </select>
+    </div>
+    <div class="tagbar" id="tagbar"></div>
+    <div id="view-area"></div>
+  </div>
+
+  <!-- Chat panel -->
+  <div class="chat-panel" id="chat-panel">
+    <div class="chat-header">
+      <h3><span class="chat-indicator"></span>Network Assistant</h3>
+      <button class="btn" style="padding:3px 8px;font-size:10px" onclick="toggleChat()">✕</button>
+    </div>
+    <div class="chat-msgs" id="chat-msgs">
+      <div class="msg ai">Hey! I have full access to your network. Ask me anything — who to reach out to, draft a message, find someone in a specific industry, or who you haven't talked to in a while.</div>
+    </div>
+    <div class="chat-suggestions" id="chat-sugg">
+      <button class="cs-btn" onclick="chatSuggest('Who should I reach out to for finance or investment banking?')">Finance connections</button>
+      <button class="cs-btn" onclick="chatSuggest('Who have I not engaged with yet?')">Not engaged yet</button>
+      <button class="cs-btn" onclick="chatSuggest('Who can help me with recruiting or career advice?')">Career advice</button>
+      <button class="cs-btn" onclick="chatSuggest('Draft an outreach to my most valuable uncontacted connection')">Draft outreach</button>
+    </div>
+    <div class="chat-input-wrap">
+      <textarea id="chat-input" placeholder="Ask about your network..." rows="1" onkeydown="chatKeydown(event)"></textarea>
+      <button class="btn btn-p" onclick="sendChat()">→</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- end .app -->
+
+<!-- Add/Edit Modal -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+  <h2 id="mtitle">Add person</h2>
+  <div class="sec">Identity</div>
+  <div class="field"><label>Name *</label><input type="text" id="fn" placeholder="Full name" oninput="updateAvPrev()"/></div>
+  <div class="row2">
+    <div class="field"><label>Company / Org</label><input type="text" id="fco" placeholder="e.g. Google, Pre-med"/></div>
+    <div class="field"><label>Position / Role</label><input type="text" id="fpos" placeholder="e.g. SWE Intern, Junior"/></div>
+  </div>
+  <div class="row2">
+    <div class="field"><label>Contact</label><input type="text" id="fc" placeholder="@handle or email"/></div>
+    <div class="field"><label>LinkedIn URL</label><input type="text" id="fli" placeholder="linkedin.com/in/..."/></div>
+  </div>
+  <div class="field"><label>Status</label>
+    <select id="fst">
+      <option value="new">New connection</option><option value="warm">Warm lead</option>
+      <option value="reached">Reached out</option><option value="met">Met IRL</option>
+      <option value="following">Following up</option><option value="corner">In my corner</option>
+    </select>
+  </div>
+  <div class="sec">Context</div>
+  <div class="row3">
+    <div class="field"><label>Where met</label><input type="text" id="fm" placeholder="e.g. CS 101"/></div>
+    <div class="field"><label>Location</label><input type="text" id="floc" placeholder="e.g. McKeldin"/></div>
+    <div class="field"><label>Date met</label><input type="date" id="fd"/></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--text2)">
+      <input type="checkbox" id="fstar" style="width:auto;padding:0"/> Star this person
+    </label>
+  </div>
+  <div class="field"><label>Note</label><textarea id="fnote" placeholder="What could they help with? Key details to remember..."></textarea></div>
+  <div class="sec">Skills / can help with</div>
+  <div class="chips" id="schips"></div>
+  <input type="text" id="fcust" placeholder="Custom skill + Enter" onkeydown="addCustSkill(event)" style="margin-bottom:4px"/>
+  <div class="sec">Profile picture</div>
+  <div style="display:flex;align-items:center;gap:11px;margin-bottom:9px">
+    <div class="avprev" id="avprev"></div>
+    <div style="flex:1">
+      <div class="avtrow">
+        <button class="btn avtbtn on" id="avt-initials" onclick="setAvT('initials')">Initials</button>
+        <button class="btn avtbtn" id="avt-emoji" onclick="setAvT('emoji')">Emoji</button>
+        <button class="btn avtbtn" id="avt-photo" onclick="setAvT('photo')">URL</button>
+      </div>
+    </div>
+  </div>
+  <div id="pan-initials"><div class="field"><label>Background</label><div class="swatches" id="sw-bg"></div></div><div class="field"><label>Text</label><div class="swatches" id="sw-tx"></div></div></div>
+  <div id="pan-emoji" style="display:none"><div class="field"><label>Emoji</label><div class="egrid" id="egrid"></div></div><div class="field" style="margin-top:5px"><label>Custom</label><input type="text" id="fcemoji" placeholder="🦊" oninput="setCustomEmoji(this.value)"/></div></div>
+  <div id="pan-photo" style="display:none"><div class="field"><label>Image URL</label><input type="text" id="fphoto" placeholder="https://..." oninput="updateAvPrev()"/></div></div>
+  <div class="mfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-p" onclick="saveContact()">Save</button></div>
+</div>
+</div>
+
+<!-- Log + AI Modal -->
+<div class="overlay" id="logoverlay" onclick="if(event.target===this)closeLog()">
+<div class="modal" style="max-width:450px">
+  <h2 id="log-title">Notes</h2>
+  <div id="log-entries" style="max-height:220px;overflow-y:auto;margin-bottom:10px"></div>
+  <div class="field"><label>Log an interaction</label><textarea id="lognote" placeholder='e.g. "Had coffee, they mentioned openings at their firm"' style="height:58px"></textarea></div>
+  <div style="display:flex;gap:6px;margin-bottom:10px">
+    <button class="btn btn-p" onclick="saveLog()" style="flex:1">Add note</button>
+    <button class="btn btn-gold" onclick="generateFollowup()" style="flex:1">AI: follow-up timing</button>
+  </div>
+  <div id="fu-suggestion" style="display:none;background:var(--gold-bg);border:1px solid var(--gold-bdr);border-radius:var(--r);padding:.7rem;font-size:12px;color:var(--gold-tx);margin-bottom:10px;line-height:1.6"></div>
+  <hr style="border:none;border-top:1px solid var(--bdr);margin-bottom:10px"/>
+  <div class="field"><label>AI outreach generator</label></div>
+  <div id="ai-result" class="ai-result" style="margin-bottom:7px">Hit generate to craft a personalized outreach message.</div>
+  <div style="display:flex;gap:6px">
+    <button class="btn btn-gold" onclick="generateOutreach()" style="flex:1">Generate message</button>
+    <button class="btn" onclick="copyOutreach()">Copy</button>
+  </div>
+  <div class="mfoot"><button class="btn" onclick="closeLog()">Close</button></div>
+</div>
+</div>
+
+<!-- LinkedIn Import Modal -->
+<div class="overlay" id="lioverlay" onclick="if(event.target===this)closeLIImport()">
+<div class="modal" style="max-width:520px">
+  <h2>LinkedIn Import</h2>
+  <div class="li-step">
+    <strong>How to export your LinkedIn connections:</strong><br/>
+    1. Go to <strong>LinkedIn → Me → Settings & Privacy</strong><br/>
+    2. Click <strong>Data Privacy → Get a copy of your data</strong><br/>
+    3. Select <strong>"Connections"</strong> only and click <strong>Request archive</strong><br/>
+    4. You'll get an email in ~10 minutes with a download link<br/>
+    5. Download and unzip — find the file called <code>Connections.csv</code><br/>
+    6. Drop it below
+  </div>
+  <div class="li-drop" id="li-drop" onclick="document.getElementById('li-file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleLIDrop(event)">
+    <p>Drop Connections.csv here</p>
+    <span>or click to browse</span>
+    <input type="file" id="li-file" accept=".csv" style="display:none" onchange="handleLIFile(event)"/>
+  </div>
+  <div id="li-preview" class="li-preview" style="display:none"></div>
+  <div id="li-actions" style="display:none" class="mfoot">
+    <button class="btn" onclick="closeLIImport()">Cancel</button>
+    <button class="btn btn-gold" onclick="selectAllLI()">Select all</button>
+    <button class="btn btn-p" onclick="importSelectedLI()">Import selected</button>
+  </div>
+</div>
+</div>
+
+<!-- Settings Modal -->
+<div class="overlay" id="soverlay" onclick="if(event.target===this)closeSettings()">
+<div class="modal" style="max-width:480px">
+  <h2>Customize</h2>
+  <div class="sec">Skill tag colors</div>
+  <div id="sklist"></div>
+  <div class="sec">Company color rules</div>
+  <p style="font-size:11px;color:var(--text3);margin-bottom:8px">Cards matching a keyword get a colored top border.</p>
+  <div id="crules"></div>
+  <button class="btn" style="margin-top:4px;font-size:11px" onclick="addCRule()">+ Add rule</button>
+  <div class="mfoot"><button class="btn btn-p" onclick="closeSettings()">Done</button></div>
+</div>
+</div>
+
+<div class="pop" id="pop"><div class="cgrid" id="cgrid"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────
+const COLORS=[
+  {h:"#7a1515",d:"#f5b8b8"},{h:"#9b1c1c",d:"#f5b8b8"},{h:"#c0392b",d:"#fff"},{h:"#e74c3c",d:"#fff"},{h:"#922b21",d:"#f5b8b8"},{h:"#641e16",d:"#f5b8b8"},{h:"#3b0f0f",d:"#f5b8b8"},{h:"#1a0808",d:"#f5b8b8"},
+  {h:"#b8860b",d:"#1a1a0a"},{h:"#d4ac0d",d:"#1a1a0a"},{h:"#9a7d0a",d:"#fff"},{h:"#7d6608",d:"#f7d794"},{h:"#f7d794",d:"#3a2a05"},{h:"#d4a853",d:"#1a1000"},{h:"#412402",d:"#f7d794"},{h:"#2a1800",d:"#f7d794"},
+  {h:"#1a6b6b",d:"#a0e0e0"},{h:"#0f5252",d:"#a0e0e0"},{h:"#1a8a8a",d:"#fff"},{h:"#6dc4c4",d:"#052a2a"},{h:"#a0e0e0",d:"#052a2a"},{h:"#052a2a",d:"#a0e0e0"},{h:"#0a4a4a",d:"#a0e0e0"},{h:"#daf5f5",d:"#052a2a"},
+  {h:"#1a3a6b",d:"#a0c4f0"},{h:"#1565c0",d:"#fff"},{h:"#a0c4f0",d:"#071d3a"},{h:"#071d3a",d:"#a0c4f0"},{h:"#2e7d32",d:"#a5d6a7"},{h:"#a5d6a7",d:"#0a1f0a"},{h:"#0a1f0a",d:"#a5d6a7"},{h:"#4a2080",d:"#d0a0f0"},
+  {h:"#0f0e0e",d:"#a89e9a"},{h:"#181616",d:"#a89e9a"},{h:"#211e1e",d:"#c0b8b8"},{h:"#2a2626",d:"#c0b8b8"},{h:"#332f2f",d:"#d0c8c8"},{h:"#6b6260",d:"#f0ece8"},{h:"#a89e9a",d:"#0f0e0e"},{h:"#f0ece8",d:"#0f0e0e"},
+];
+const DEFPAL=[
+  {bg:"rgba(155,28,28,0.15)",bd:"rgba(155,28,28,0.4)",tx:"#e8a09a"},
+  {bg:"rgba(184,134,11,0.12)",bd:"rgba(184,134,11,0.3)",tx:"#d4a853"},
+  {bg:"rgba(26,107,107,0.15)",bd:"rgba(26,107,107,0.4)",tx:"#6dc4c4"},
+  {bg:"rgba(26,58,107,0.15)",bd:"rgba(26,58,107,0.4)",tx:"#a0c4f0"},
+  {bg:"rgba(46,125,50,0.15)",bd:"rgba(46,125,50,0.4)",tx:"#a5d6a7"},
+  {bg:"rgba(74,32,128,0.15)",bd:"rgba(74,32,128,0.4)",tx:"#d0a0f0"},
+  {bg:"rgba(42,38,38,0.6)",bd:"rgba(255,255,255,0.13)",tx:"#a89e9a"},
+  {bg:"rgba(26,110,107,0.1)",bd:"rgba(109,196,196,0.3)",tx:"#6dc4c4"},
+];
+const DEFAV=[
+  {bg:"#3b0f0f",tx:"#e8a09a"},{bg:"#1a3a6b",tx:"#a0c4f0"},
+  {bg:"#0f3322",tx:"#6dc4c4"},{bg:"#2a2010",tx:"#d4a853"},
+  {bg:"#1a1040",tx:"#d0a0f0"},{bg:"#1a2a10",tx:"#a5d6a7"},
+];
+const EMOJIS=["😊","🎓","🚀","💡","🎨","🎵","⚽","🏀","🎯","💻","🔬","📚","🌟","🦁","🐯","🦊","🦋","🌈","🍕","☕","🎸","✏️","🔥","💎","🌊","🏔️","🎭","🤖","🧪","🎤","🏋️","🌿","🧠","🏆"];
+const SKILLS=["Coding","Design","Writing","Math","Pre-med","Law","Finance","Research","Music","Photography","Video editing","Language tutor","Career advice","Networking","Lab skills","Public speaking","Data analysis","Social media","Business","Marketing","UX/UI","Machine learning","Consulting","Investment banking","Product management"];
+const STATUSES=[
+  {id:"new",label:"New connection",dot:"#6b6260",bg:"rgba(42,38,38,.5)",tx:"#a89e9a",bd:"rgba(255,255,255,.1)"},
+  {id:"warm",label:"Warm lead",dot:"#d4a853",bg:"rgba(184,134,11,.12)",tx:"#d4a853",bd:"rgba(184,134,11,.3)"},
+  {id:"reached",label:"Reached out",dot:"#6dc4c4",bg:"rgba(26,107,107,.15)",tx:"#6dc4c4",bd:"rgba(26,107,107,.4)"},
+  {id:"met",label:"Met IRL",dot:"#a5d6a7",bg:"rgba(46,125,50,.15)",tx:"#a5d6a7",bd:"rgba(46,125,50,.4)"},
+  {id:"following",label:"Following up",dot:"#e8a09a",bg:"rgba(155,28,28,.15)",tx:"#e8a09a",bd:"rgba(155,28,28,.4)"},
+  {id:"corner",label:"In my corner",dot:"#d0a0f0",bg:"rgba(74,32,128,.15)",tx:"#d0a0f0",bd:"rgba(74,32,128,.4)"},
+];
+
+// ── State ──────────────────────────────────────────────────────────
+function loadState(){try{return JSON.parse(localStorage.getItem('mn6')||'{}')}catch{return{}}}
+function persist(){localStorage.setItem('mn6',JSON.stringify(S))}
+let S=loadState();
+if(!S.contacts)S.contacts=[];
+if(!S.skillColors)S.skillColors={};
+if(!S.companyRules)S.companyRules=[];
+if(!S.chatHistory)S.chatHistory=[];
+let nid=S.contacts.length?Math.max(...S.contacts.map(c=>c.id))+1:1;
+let activeTag=null,editId=null,logId=null,selSk=new Set(),currentView='cards',chatOpen=true;
+let avT='initials',avBg='#3b0f0f',avTx='#e8a09a',avEm='😊',avPh='';
+let popMode=null,popArg=null,liRows=[];
+
+// ── Utils ──────────────────────────────────────────────────────────
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+function inits(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+function defAv(id){return DEFAV[id%DEFAV.length]}
+function defTag(sk){let h=0;for(const c of sk)h=(h*31+c.charCodeAt(0))%DEFPAL.length;return DEFPAL[h]}
+function tagStyle(sk){const c=S.skillColors[sk]||defTag(sk);return`background:${c.bg};border-color:${c.bd};color:${c.tx}`}
+function coBorder(co){if(!co)return null;const lc=co.toLowerCase();for(const r of S.companyRules)if(r.keyword&&lc.includes(r.keyword.toLowerCase()))return r.color;return null}
+function stObj(id){return STATUSES.find(s=>s.id===id)||STATUSES[0]}
+function fmtDate(d){if(!d)return'';try{const[y,m,dy]=d.split('-');return`${m}/${dy}/${y.slice(2)}`}catch{return d}}
+function todayStr(){return new Date().toISOString().slice(0,10)}
+function fuFlag(fu){if(!fu)return'';const diff=(new Date(fu)-new Date(todayStr()))/86400000;if(diff<0)return`<span class="fu-over">Follow-up overdue</span>`;if(diff<=3)return`<span class="fu-over fu-soon">Follow up in ${Math.round(diff)}d</span>`;return`<span style="font-size:10px;color:var(--text3)">Follow up ${fmtDate(fu)}</span>`;}
+function lastAct(c){return c.log&&c.log.length?c.log[c.log.length-1].ts:c.added||''}
+function allTags(){const s=new Set();S.contacts.forEach(c=>(c.skills||[]).forEach(t=>s.add(t)));return[...s].sort()}
+function networkSummary(){
+  return S.contacts.map(c=>`- ${c.name}${c.company?` @ ${c.company}`:''}${c.position?`, ${c.position}`:''}${(c.skills||[]).length?` | Skills: ${c.skills.join(', ')}`:''}${c.status?` | Status: ${c.status}`:''}${c.note?` | Note: ${c.note}`:''}`).join('\n');
+}
+
+// ── Avatar ─────────────────────────────────────────────────────────
+function avHtml(c,sz=40){
+  const av=c.avatar||{};const fs=Math.round(sz*.32);
+  if(av.type==='photo'&&av.photo)return`<div class="avatar" style="width:${sz}px;height:${sz}px"><img src="${esc(av.photo)}" onerror="this.parentElement.innerHTML='${inits(c.name)}'"/></div>`;
+  if(av.type==='emoji')return`<div class="avatar eav" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.45)}px">${av.emoji||'😊'}</div>`;
+  const col=av.bg?{bg:av.bg,tx:av.tx}:defAv(c.id);
+  return`<div class="avatar" style="width:${sz}px;height:${sz}px;background:${col.bg};color:${col.tx};font-size:${fs}px">${inits(c.name)}</div>`;
+}
+
+// ── Stats ──────────────────────────────────────────────────────────
+function renderStats(){
+  const cs=S.contacts,tot=cs.length,starred=cs.filter(c=>c.star).length;
+  const engaged=cs.filter(c=>['reached','met','following','corner'].includes(c.status)).length;
+  const due=cs.filter(c=>c.followup&&c.followup<=todayStr()).length;
+  const stC=STATUSES.map(s=>({...s,n:cs.filter(c=>c.status===s.id).length}));
+  document.getElementById('statsbar').innerHTML=`
+    <div class="stat"><span class="stat-n">${tot}</span><span class="stat-l">total</span></div>
+    <div class="stat"><span class="stat-n">${starred}</span><span class="stat-l">starred</span></div>
+    <div class="stat"><span class="stat-n">${engaged}</span><span class="stat-l">engaged</span></div>
+    ${due?`<div class="stat"><span class="stat-n" style="color:var(--red-tx)">${due}</span><span class="stat-l">follow-ups due</span></div>`:''}
+    <div style="margin-left:auto;display:flex;gap:12px;flex-wrap:wrap">
+      ${stC.filter(s=>s.n).map(s=>`<div class="stat"><span class="stat-dot" style="background:${s.dot}"></span><span class="stat-n" style="font-size:12px">${s.n}</span><span class="stat-l">${s.label}</span></div>`).join('')}
+    </div>`;
+}
+
+// ── Render ─────────────────────────────────────────────────────────
+function setView(v){currentView=v;['cards','kanban'].forEach(x=>document.getElementById('vb-'+x).classList.toggle('on',x===v));render()}
+function toggleChat(){chatOpen=!chatOpen;document.getElementById('chat-panel').classList.toggle('collapsed',!chatOpen);document.getElementById('chat-toggle-btn').textContent=chatOpen?'✕ Close AI':'AI Assistant ↗'}
+function getSorted(){
+  const q=document.getElementById('search').value.toLowerCase();
+  const sort=document.getElementById('sortsel').value;
+  let list=S.contacts.filter(c=>{
+    const mq=!q||[c.name,c.note,c.meta,c.company,c.position,c.location,c.contact,...(c.skills||[])].some(v=>(v||'').toLowerCase().includes(q));
+    return mq&&(!activeTag||c.skills.includes(activeTag));
+  });
+  if(sort==='star')list.sort((a,b)=>(b.star?1:0)-(a.star?1:0)||(new Date(b.added||0)-new Date(a.added||0)));
+  else if(sort==='name')list.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(sort==='added')list.sort((a,b)=>new Date(b.added||0)-new Date(a.added||0));
+  else if(sort==='followup')list.sort((a,b)=>{if(!a.followup&&!b.followup)return 0;if(!a.followup)return 1;if(!b.followup)return-1;return a.followup.localeCompare(b.followup)});
+  else if(sort==='activity')list.sort((a,b)=>lastAct(b).localeCompare(lastAct(a)));
+  return list;
+}
+function render(){
+  renderStats();
+  const tags=allTags();
+  document.getElementById('tagbar').innerHTML=tags.map(t=>`<button class="tbtn" style="${activeTag===t?tagStyle(t)+';border-width:1.5px':''}" onclick="toggleTag('${t.replace(/'/g,"\\'")}')">${esc(t)}</button>`).join('');
+  const list=getSorted();
+  const el=document.getElementById('view-area');
+  if(!list.length){el.innerHTML=`<div style="display:grid"><div class="empty">${S.contacts.length===0?'Your network is empty.<br><br>Hit <strong style="color:var(--red-tx)">+ Add person</strong> or use <strong style="color:var(--gold-tx)">LinkedIn Import</strong> to get started.':'No matches found.'}</div></div>`;return}
+  if(currentView==='kanban')el.innerHTML=`<div class="kanban">${STATUSES.map(st=>{const cards=list.filter(c=>(c.status||'new')===st.id);return`<div class="kol"><div class="kol-title"><span class="stat-dot" style="background:${st.dot}"></span>${st.label}<span class="kol-n">${cards.length}</span></div>${cards.map(c=>`<div class="kcard" style="border-left-color:${coBorder(c.company)||st.dot}" onclick="openModal(${c.id})"><div class="kcard-name">${esc(c.name)}</div><div class="kcard-sub">${[c.company,c.position].filter(Boolean).map(esc).join(' · ')}</div>${fuFlag(c.followup)}</div>`).join('')}</div>`}).join('')}</div>`;
+  else el.innerHTML=`<div class="cards">${list.map(c=>{
+    const st=stObj(c.status||'new'),bc=coBorder(c.company),logN=(c.log||[]).length,fl=fuFlag(c.followup);
+    return`<div class="card" style="border-top-color:${bc||'transparent'}">
+      <div class="card-inner">
+        <div class="card-top">${avHtml(c,40)}<div class="card-head">
+          <div class="card-name"><span>${esc(c.name)}</span><span class="star${c.star?' on':''}" onclick="toggleStar(${c.id})">${c.star?'★':'☆'}</span></div>
+          ${c.company?`<div class="card-company">${esc(c.company)}</div>`:''}
+          ${c.position?`<div class="card-position">${esc(c.position)}</div>`:''}
+          ${c.contact?`<div class="card-contact">${esc(c.contact)}</div>`:''}
+          ${c.linkedin?`<div class="card-li"><a href="${esc(c.linkedin.startsWith('http')?c.linkedin:'https://'+c.linkedin)}" target="_blank">↗ LinkedIn</a></div>`:''}
+        </div></div>
+        <span class="sbadge" style="background:${st.bg};border-color:${st.bd};color:${st.tx}"><span style="width:5px;height:5px;border-radius:50%;background:${st.dot};display:inline-block"></span>${st.label}</span>
+        ${c.note?`<div class="card-note">${esc(c.note)}</div>`:''}
+        <div class="tags">${(c.skills||[]).map(s=>`<span class="tag" style="${tagStyle(s)}">${esc(s)}</span>`).join('')}</div>
+        ${fl?`<div style="margin-top:4px">${fl}</div>`:''}
+        <hr class="divider"/>
+        <div class="card-ctx">
+          ${c.meta?`<span>📍 ${esc(c.meta)}</span>`:''}
+          ${c.location?`<span>🏛 ${esc(c.location)}</span>`:''}
+          ${c.date?`<span>📅 ${fmtDate(c.date)}</span>`:''}
+        </div>
+      </div>
+      <div class="card-footer">
+        <button onclick="openModal(${c.id})">Edit</button>
+        <button onclick="openLog(${c.id})">Notes${logN?` (${logN})`:''}</button>
+        <button class="ai-btn" onclick="openLog(${c.id},true)">AI ↗</button>
+        <button class="del rml" onclick="delC(${c.id})">✕</button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+function toggleTag(t){activeTag=activeTag===t?null:t;render()}
+function toggleStar(id){const c=S.contacts.find(x=>x.id===id);if(c){c.star=!c.star;persist();render()}}
+
+// ── Add/Edit Modal ─────────────────────────────────────────────────
+function openModal(id=null){
+  editId=id;const c=id?S.contacts.find(x=>x.id===id):{};
+  selSk=new Set(c.skills||[]);
+  document.getElementById('mtitle').textContent=id?'Edit contact':'Add person';
+  ['fn','fm','fd','floc','fc','fco','fpos','fli','fnote'].forEach(f=>{const map={fn:'name',fm:'meta',fd:'date',floc:'location',fc:'contact',fco:'company',fpos:'position',fli:'linkedin',fnote:'note'};document.getElementById(f).value=c[map[f]]||''});
+  document.getElementById('fst').value=c.status||'new';
+  document.getElementById('fstar').checked=!!c.star;
+  document.getElementById('fcust').value='';
+  const av=c.avatar||{};avT=av.type||'initials';avBg=av.bg||'#3b0f0f';avTx=av.tx||'#e8a09a';avEm=av.emoji||'😊';avPh=av.photo||'';
+  document.getElementById('fphoto').value=avPh;document.getElementById('fcemoji').value='';
+  renderChips();renderAvPanel();updateAvPrev();
+  document.getElementById('overlay').classList.add('open');document.getElementById('fn').focus();
+}
+function closeModal(){document.getElementById('overlay').classList.remove('open');closePop()}
+function renderChips(){const all=[...new Set([...SKILLS,...S.contacts.flatMap(c=>c.skills||[]),...selSk])];document.getElementById('schips').innerHTML=all.map(s=>`<span class="chip${selSk.has(s)?' on':''}" onclick="toggleSk('${s.replace(/'/g,"\\'")}')">${esc(s)}</span>`).join('')}
+function toggleSk(s){selSk.has(s)?selSk.delete(s):selSk.add(s);renderChips()}
+function addCustSkill(e){if(e.key!=='Enter')return;const v=document.getElementById('fcust').value.trim();if(!v)return;selSk.add(v);document.getElementById('fcust').value='';renderChips()}
+function setAvT(t){avT=t;['initials','emoji','photo'].forEach(x=>{document.getElementById('avt-'+x).classList.toggle('on',x===t);document.getElementById('pan-'+x).style.display=x===t?'':'none'});updateAvPrev()}
+function renderAvPanel(){
+  setAvT(avT);
+  document.getElementById('sw-bg').innerHTML=COLORS.map(p=>`<div class="sw${avBg===p.h?' sel':''}" style="background:${p.h}" onclick="avBg='${p.h}';avTx='${p.d}';renderAvPanel()"></div>`).join('');
+  document.getElementById('sw-tx').innerHTML=COLORS.map(p=>`<div class="sw${avTx===p.h?' sel':''}" style="background:${p.h};border:1px solid var(--bdr2)" onclick="avTx='${p.h}';renderAvPanel()"></div>`).join('');
+  document.getElementById('egrid').innerHTML=EMOJIS.map(e=>`<div class="eopt${avEm===e?' sel':''}" onclick="avEm='${e}';renderAvPanel()">${e}</div>`).join('');
+}
+function setCustomEmoji(v){const e=v.trim();if(e){avEm=e;updateAvPrev()}}
+function updateAvPrev(){
+  const nm=document.getElementById('fn').value||'?',el=document.getElementById('avprev');
+  if(avT==='photo'){const url=document.getElementById('fphoto').value.trim();el.className='avprev';el.style.background=avBg;el.style.color=avTx;el.innerHTML=url?`<img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`:`<span>${inits(nm)}</span>`}
+  else if(avT==='emoji'){el.className='avprev eav';el.style.background='';el.style.color='';el.innerHTML=avEm}
+  else{el.className='avprev';el.style.background=avBg;el.style.color=avTx;el.innerHTML=`<span>${inits(nm)}</span>`}
+}
+function saveContact(){
+  const name=document.getElementById('fn').value.trim();if(!name){document.getElementById('fn').focus();return}
+  const av={type:avT};if(avT==='initials'){av.bg=avBg;av.tx=avTx}else if(avT==='emoji'){av.emoji=avEm}else{av.photo=document.getElementById('fphoto').value.trim()}
+  const ex=editId?S.contacts.find(x=>x.id===editId):{};
+  const c={id:editId||nid++,name,meta:document.getElementById('fm').value.trim(),date:document.getElementById('fd').value,location:document.getElementById('floc').value.trim(),contact:document.getElementById('fc').value.trim(),company:document.getElementById('fco').value.trim(),position:document.getElementById('fpos').value.trim(),linkedin:document.getElementById('fli').value.trim(),status:document.getElementById('fst').value,note:document.getElementById('fnote').value.trim(),star:document.getElementById('fstar').checked,skills:[...selSk],avatar:av,log:ex.log||[],added:ex.added||new Date().toISOString()};
+  S.contacts=editId?S.contacts.map(x=>x.id===editId?c:x):[...S.contacts,c];
+  persist();closeModal();render();toast(editId?'Saved':'Person added');
+}
+function delC(id){if(!confirm('Remove this person?'))return;S.contacts=S.contacts.filter(c=>c.id!==id);persist();render();toast('Removed')}
+
+// ── Log + AI Modal ─────────────────────────────────────────────────
+function openLog(id,focusAI=false){
+  logId=id;const c=S.contacts.find(x=>x.id===id);
+  document.getElementById('log-title').textContent=c.name;
+  document.getElementById('lognote').value='';
+  document.getElementById('ai-result').textContent='Hit generate to craft a personalized outreach message.';
+  document.getElementById('fu-suggestion').style.display='none';
+  renderLogEntries(c);document.getElementById('logoverlay').classList.add('open');
+  if(focusAI)document.getElementById('lognote').focus();
+}
+function closeLog(){document.getElementById('logoverlay').classList.remove('open')}
+function renderLogEntries(c){
+  const entries=(c.log||[]).slice().reverse();
+  document.getElementById('log-entries').innerHTML=entries.length?entries.map(e=>`<div class="log-entry"><div class="log-date">${new Date(e.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div><div class="log-text">${esc(e.text)}</div></div>`).join(''):`<p style="font-size:12px;color:var(--text3);padding:5px 0">No notes yet.</p>`;
+}
+function saveLog(){
+  const text=document.getElementById('lognote').value.trim();if(!text)return;
+  const c=S.contacts.find(x=>x.id===logId);if(!c)return;
+  if(!c.log)c.log=[];c.log.push({ts:new Date().toISOString(),text});
+  const lc=text.toLowerCase();let days=null;
+  if(lc.includes('interview'))days=2;
+  else if(lc.includes('sent')||lc.includes('messaged')||lc.includes('emailed'))days=5;
+  else if(lc.includes('coffee')||lc.includes('met')||lc.includes('lunch')||lc.includes('call'))days=7;
+  else if(lc.includes('event')||lc.includes('fair')||lc.includes('conference'))days=3;
+  if(days){const d=new Date();d.setDate(d.getDate()+days);c.followup=d.toISOString().slice(0,10)}
+  persist();renderLogEntries(c);render();document.getElementById('lognote').value='';
+  toast('Note saved'+(days?` · Follow-up in ${days}d`:''));
+}
+async function callAI(prompt){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+  const d=await r.json();return d.content?.[0]?.text||'Could not generate.';
+}
+async function generateFollowup(){
+  const c=S.contacts.find(x=>x.id===logId);if(!c)return;
+  const el=document.getElementById('fu-suggestion');el.style.display='block';el.textContent='Analyzing...';
+  const log=(c.log||[]).slice(-5).map(e=>e.text).join('\n');
+  try{el.textContent=await callAI(`You are a professional networking advisor for a college student. Based on this contact and recent log, give a short (2-3 sentence) specific follow-up recommendation.\n\nContact: ${c.name}${c.company?', '+c.company:''}${c.position?', '+c.position:''}\nStatus: ${c.status}\nRecent notes: ${log||'none'}`);}
+  catch{el.textContent='Network error.'}
+}
+async function generateOutreach(){
+  const c=S.contacts.find(x=>x.id===logId);if(!c)return;
+  const el=document.getElementById('ai-result');el.textContent='Crafting message...';
+  const ctx=document.getElementById('lognote').value.trim();
+  try{el.textContent=await callAI(`Write a short, genuine outreach message (4-6 sentences) from a college freshman to this person. Sound natural and specific, not generic. No subject line, no placeholders.\n\nContact: ${c.name}\nCompany: ${c.company||'?'}\nRole: ${c.position||'?'}\nSkills: ${(c.skills||[]).join(', ')||'?'}\nHow we met: ${c.meta||'cold outreach'}\nContext: ${ctx||''}\nNote: ${c.note||''}`);}
+  catch{el.textContent='Network error.'}
+}
+function copyOutreach(){navigator.clipboard.writeText(document.getElementById('ai-result').textContent).then(()=>toast('Copied')).catch(()=>toast('Select text manually'))}
+
+// ── LinkedIn Import ────────────────────────────────────────────────
+function openLIImport(){document.getElementById('lioverlay').classList.add('open');document.getElementById('li-preview').style.display='none';document.getElementById('li-actions').style.display='none';liRows=[]}
+function closeLIImport(){document.getElementById('lioverlay').classList.remove('open')}
+function handleLIDrop(e){e.preventDefault();document.getElementById('li-drop').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)parseLICSV(f)}
+function handleLIFile(e){const f=e.target.files[0];if(f)parseLICSV(f);e.target.value=''}
+function parseLICSV(file){
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const lines=ev.target.result.split('\n').map(l=>l.trim()).filter(Boolean);
+    // Find header row — LinkedIn CSV has some preamble notes before actual headers
+    let headerIdx=lines.findIndex(l=>l.toLowerCase().includes('first name'));
+    if(headerIdx===-1){toast('Could not parse CSV — make sure it is Connections.csv');return}
+    const headers=parseCSVLine(lines[headerIdx]).map(h=>h.trim().toLowerCase());
+    const colIdx=name=>headers.findIndex(h=>h.includes(name));
+    const first=colIdx('first name'),last=colIdx('last name'),pos=colIdx('position'),company=colIdx('company'),email=colIdx('email');
+    liRows=[];
+    for(let i=headerIdx+1;i<lines.length;i++){
+      const cols=parseCSVLine(lines[i]);
+      if(cols.length<2)continue;
+      const name=[(cols[first]||'').trim(),(cols[last]||'').trim()].filter(Boolean).join(' ');
+      if(!name)continue;
+      liRows.push({name,position:(cols[pos]||'').trim(),company:(cols[company]||'').trim(),contact:(cols[email]||'').trim(),selected:true});
+    }
+    if(!liRows.length){toast('No contacts found in CSV');return}
+    renderLIPreview();
+  };
+  reader.readAsText(file);
+}
+function parseCSVLine(line){
+  const result=[];let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){inQ=!inQ}else if(ch===','&&!inQ){result.push(cur);cur=''}else cur+=ch;}
+  result.push(cur);return result;
+}
+function renderLIPreview(){
+  const existing=new Set(S.contacts.map(c=>c.name.toLowerCase()));
+  const newRows=liRows.filter(r=>!existing.has(r.name.toLowerCase()));
+  const dupRows=liRows.filter(r=>existing.has(r.name.toLowerCase()));
+  const el=document.getElementById('li-preview');
+  el.style.display='block';
+  document.getElementById('li-actions').style.display='flex';
+  el.innerHTML=`<p style="font-size:12px;color:var(--text2);margin-bottom:8px">${liRows.length} connections found · <span style="color:var(--gold-tx)">${newRows.length} new</span> · <span style="color:var(--text3)">${dupRows.length} already in network</span></p>`+
+    newRows.map((r,i)=>`<div class="li-row"><input type="checkbox" class="li-check" ${r.selected?'checked':''} onchange="liRows[${liRows.indexOf(r)}].selected=this.checked"/><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;color:var(--text)">${esc(r.name)}</div><div style="font-size:11px;color:var(--text3)">${[r.position,r.company].filter(Boolean).map(esc).join(' · ')}</div></div></div>`).join('')+
+    (dupRows.length?`<p style="font-size:11px;color:var(--text3);margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr)">${dupRows.length} already in your network: ${dupRows.map(r=>esc(r.name)).join(', ')}</p>`:'');
+}
+function selectAllLI(){liRows.forEach(r=>r.selected=true);document.querySelectorAll('.li-check').forEach(c=>c.checked=true)}
+function importSelectedLI(){
+  const existing=new Set(S.contacts.map(c=>c.name.toLowerCase()));
+  const toAdd=liRows.filter(r=>r.selected&&!existing.has(r.name.toLowerCase()));
+  if(!toAdd.length){toast('Nothing to import');return}
+  toAdd.forEach(r=>{
+    S.contacts.push({id:nid++,name:r.name,company:r.company,position:r.position,contact:r.contact,status:'new',skills:[],log:[],added:new Date().toISOString(),source:'linkedin'});
+  });
+  persist();closeLIImport();render();toast(`Imported ${toAdd.length} connections`);
+}
+
+// ── Chat / AI Assistant ────────────────────────────────────────────
+function chatSuggest(text){document.getElementById('chat-input').value=text;sendChat()}
+function chatKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()}}
+function addMsg(role,html,isHtml=false){
+  const el=document.getElementById('chat-msgs');
+  const div=document.createElement('div');
+  div.className=`msg ${role}`;
+  if(isHtml)div.innerHTML=html;else div.textContent=html;
+  el.appendChild(div);el.scrollTop=el.scrollHeight;
+  return div;
+}
+async function sendChat(){
+  const input=document.getElementById('chat-input');
+  const text=input.value.trim();if(!text)return;
+  input.value='';
+  addMsg('user',text);
+  const thinking=addMsg('ai','Thinking...','false');thinking.classList.add('thinking');
+  // Build messages with history
+  const systemPrompt=`You are a smart, concise networking assistant for a college freshman. You have full access to their contact database. Help them navigate their network strategically.
+
+When referencing specific people, format them as contact cards by including a line like: [CARD:id:name:company:position] — but only if you know their ID.
+
+Current network (${S.contacts.length} contacts):
+${networkSummary()||'No contacts yet.'}
+
+Today: ${todayStr()}
+Be direct, specific, and brief. When suggesting outreach, offer to draft a message.`;
+  const messages=[...S.chatHistory.slice(-10),{role:'user',content:text}];
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:systemPrompt,messages})});
+    const d=await r.json();
+    const reply=d.content?.[0]?.text||'Could not respond.';
+    thinking.remove();
+    // Parse contact card references
+    const rendered=reply.replace(/\[CARD:(\d+):([^:]+):([^:]*):([^\]]*)\]/g,(match,id,name,company,pos)=>{
+      const c=S.contacts.find(x=>x.id===parseInt(id));
+      const disp=c?`<div class="msg-contact-card" onclick="openModal(${id})">${avHtml(c,28).replace(/"/g,"'")}<div><div class="mcn">${esc(name)}</div><div class="mcs">${[company,pos].filter(Boolean).map(esc).join(' · ')}</div></div></div>`:''
+      return disp||`<strong>${esc(name)}</strong>`;
+    });
+    const msgEl=addMsg('ai',rendered,true);
+    S.chatHistory.push({role:'user',content:text},{role:'assistant',content:reply});
+    if(S.chatHistory.length>40)S.chatHistory=S.chatHistory.slice(-40);
+    persist();
+  }catch(err){thinking.remove();addMsg('ai','Network error — check your connection.')}
+}
+
+// ── Settings ───────────────────────────────────────────────────────
+function openSettings(){renderSkList();renderCRules();document.getElementById('soverlay').classList.add('open')}
+function closeSettings(){document.getElementById('soverlay').classList.remove('open');closePop();persist();render()}
+function renderSkList(){
+  const tags=allTags();const el=document.getElementById('sklist');
+  if(!tags.length){el.innerHTML='<p style="font-size:12px;color:var(--text3);margin-bottom:8px">Add contacts with skills first.</p>';return}
+  el.innerHTML=tags.map(s=>{const col=S.skillColors[s]||defTag(s);return`<div class="srule"><span class="tag" style="${tagStyle(s)}">${esc(s)}</span><span style="flex:1"></span><span style="font-size:10px;color:var(--text3)">bg</span><div class="swbtn" style="background:${col.bg.includes('rgba')?'#2a2626':col.bg}" onclick="openPop(this,'skbg','${s.replace(/'/g,"\\'")}')" ></div><span style="font-size:10px;color:var(--text3)">text</span><div class="swbtn" style="background:${col.tx}" onclick="openPop(this,'sktx','${s.replace(/'/g,"\\'")}')" ></div>${S.skillColors[s]?`<button class="btn" style="font-size:10px;padding:2px 6px" onclick="resetSk('${s.replace(/'/g,"\\'")}')" >Reset</button>`:''}</div>`;}).join('');
+}
+function resetSk(s){delete S.skillColors[s];persist();renderSkList();render()}
+function renderCRules(){
+  const el=document.getElementById('crules');
+  if(!S.companyRules.length){el.innerHTML='<p style="font-size:12px;color:var(--text3);margin-bottom:8px">No rules yet.</p>';return}
+  el.innerHTML=S.companyRules.map((r,i)=>`<div class="srule"><input type="text" value="${esc(r.keyword)}" placeholder="keyword" oninput="S.companyRules[${i}].keyword=this.value;persist();render()"/><div class="swbtn" style="background:${r.color}" onclick="openPop(this,'crule',${i})"></div><button class="btn" style="font-size:10px;padding:2px 6px;color:var(--red-tx);border-color:var(--red-bdr)" onclick="rmCRule(${i})">Remove</button></div>`).join('');
+}
+function addCRule(){S.companyRules.push({keyword:'',color:'#9b1c1c'});persist();renderCRules()}
+function rmCRule(i){S.companyRules.splice(i,1);persist();renderCRules();render()}
+
+// ── Color popover ──────────────────────────────────────────────────
+function openPop(anchor,mode,arg){
+  popMode=mode;popArg=arg;
+  document.getElementById('cgrid').innerHTML=COLORS.map(p=>`<div class="cdot" style="background:${p.h}" onclick="pickCol('${p.h}','${p.d}')"></div>`).join('');
+  const pop=document.getElementById('pop'),rect=anchor.getBoundingClientRect();
+  pop.style.top=(rect.bottom+window.scrollY+5)+'px';
+  pop.style.left=Math.min(rect.left,window.innerWidth-220)+'px';
+  pop.classList.add('open');
+}
+function closePop(){document.getElementById('pop').classList.remove('open');popMode=null}
+function pickCol(h,d){
+  if(popMode==='skbg'){if(!S.skillColors[popArg])S.skillColors[popArg]={...defTag(popArg)};S.skillColors[popArg].bg=h;S.skillColors[popArg].bd=d;persist();renderSkList();render()}
+  else if(popMode==='sktx'){if(!S.skillColors[popArg])S.skillColors[popArg]={...defTag(popArg)};S.skillColors[popArg].tx=h;persist();renderSkList();render()}
+  else if(popMode==='crule'){S.companyRules[popArg].color=h;persist();renderCRules();render()}
+  closePop();
+}
+document.addEventListener('click',e=>{const pop=document.getElementById('pop');if(pop.classList.contains('open')&&!pop.contains(e.target)&&!e.target.classList.contains('swbtn')&&!e.target.classList.contains('cdot'))closePop()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeSettings();closeLog();closeLIImport()}});
+
+// ── Import / Export ────────────────────────────────────────────────
+function exportData(){const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`network_${new Date().toISOString().slice(0,10)}.json`;a.click();toast('Backup downloaded')}
+function importData(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{try{const imp=JSON.parse(ev.target.result);const contacts=imp.contacts||imp;if(!Array.isArray(contacts))throw 0;if(!confirm(`Import ${contacts.length} contacts?`))return;const ex=new Set(S.contacts.map(c=>c.id));S.contacts=[...S.contacts,...contacts.filter(c=>!ex.has(c.id))];if(imp.skillColors)Object.assign(S.skillColors,imp.skillColors);if(imp.companyRules)S.companyRules=[...S.companyRules,...imp.companyRules];nid=Math.max(nid,...S.contacts.map(c=>c.id))+1;persist();render();toast('Import complete')}catch{toast('Invalid file')}};
+  r.readAsText(file);e.target.value='';
+}
+
+render();
+</script>
+</body>
+</html>
